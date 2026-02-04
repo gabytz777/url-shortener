@@ -40,7 +40,7 @@ def generate_code(length: int = 6) -> str:
     while True:
         token = secrets.token_urlsafe(4)
         code = ''.join([c for c in token if c.isalnum()])[:length]
-        if not code:
+        if len(code) < length:
             continue
         if not get_url(code):
             return code
