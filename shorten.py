@@ -1,12 +1,6 @@
 import sys
 import requests
 
-"""Simple CLI that posts to the running local server to create a short URL.
-Run the server first: python app.py
-Then: python shorten.py https://example.com
-"""
-
-
 def main():
     if len(sys.argv) < 2:
         print("Usage: python shorten.py <long_url>")
