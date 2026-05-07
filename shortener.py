@@ -36,7 +36,6 @@ def _normalize_url(url: str) -> str:
 
 
 def generate_code(length: int = 6) -> str:
-    # generate a short alphanumeric token; retry until unique
     while True:
         token = secrets.token_urlsafe(4)
         code = ''.join([c for c in token if c.isalnum()])[:length]
