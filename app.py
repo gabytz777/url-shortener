@@ -4,7 +4,6 @@ import shortener
 app = Flask(__name__)
 
 
-# Initialize DB (Flask 3 removed before_first_request); run once at import
 shortener.init_db()
 
 
