@@ -1,26 +1,20 @@
-# Simple Flask URL Shortener ✅
+Simple Flask URL Shortener 
 
-A tiny self-hosted URL shortener implemented in Python + Flask with SQLite storage.
+This is a small self-hosted URL shortener made with Python + Flask, using SQLite to store links.
 
-## Requirements
-- Python 3.8+
-- Install dependencies: pip install -r requirements.txt
+To run it, you’ll need Python 3.8+ installed. Install the dependencies with:
 
-## Run the server
-1. Start the app:
+pip install -r requirements.txt
 
-   python app.py
+Then start the server with:
 
-2. Open your browser at http://localhost:5000 and paste a URL to shorten.
+python app.py
 
-## CLI usage
-- With the server running, run:
+After that, open http://localhost:5000
+ in your browser and paste in a URL to shorten.
 
-  python shorten.py https://example.com
+There’s also a CLI script if you prefer. With the server running, you can do:
 
-This prints the shortened URL.
+python shorten.py https://example.com
 
-## Notes
-- Data is stored in `urls.db` (SQLite) in the project folder.
-- To change DB path, set `URL_SHORTENER_DB` environment variable.
-- Improvements you might want: custom codes, expiry, user accounts, analytics, tests.
+and it’ll print the shortened link.
