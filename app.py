@@ -1,7 +1,11 @@
 from flask import Flask, request, redirect, jsonify, render_template
+from werkzeug.middleware.proxy_fix import ProxyFix
 import shortener
 
 app = Flask(__name__)
+# the tunnel ends TLS and forwards the original scheme; without this every
+# short link it builds is http://
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 
 
 shortener.init_db()
