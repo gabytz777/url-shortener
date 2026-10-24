@@ -1,2 +1,4 @@
-flask
-requests
+Flask==3.1.3
+requests==2.34.2
+# the WSGI server the systemd unit runs (url-shortener.service)
+waitress==3.0.2
