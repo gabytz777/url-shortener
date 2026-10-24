@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+*.pyc
+# runtime data: the links and their visit counts, not source
+urls.db
