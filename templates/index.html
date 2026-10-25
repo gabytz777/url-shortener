@@ -26,6 +26,8 @@
     </form>
     <p id="result"></p>
     <p id="expiry-info"></p>
+    <button id="copy-btn" style="display:none" type="button">Copy</button>
+    <span id="copy-msg"></span>
 
     <script>
       const form = document.getElementById('shorten-form');
@@ -35,6 +37,9 @@
       const customBr = document.getElementById('custom-br');
       const result = document.getElementById('result');
       const expiryInfo = document.getElementById('expiry-info');
+      const copyBtn = document.getElementById('copy-btn');
+      const copyMsg = document.getElementById('copy-msg');
+      let shortUrl = '';
 
       const MAX_MS = 10 * 365 * 24 * 60 * 60 * 1000;
 
@@ -60,19 +65,39 @@
         }
       });
 
+      copyBtn.addEventListener('click', async function () {
+        if (!shortUrl) return;
+        try {
+          await navigator.clipboard.writeText(shortUrl);
+          copyMsg.textContent = 'Copied!';
+        } catch (e) {
+          const ta = document.createElement('textarea');
+          ta.value = shortUrl;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          copyMsg.textContent = 'Copied!';
+        }
+        setTimeout(function () { copyMsg.textContent = ''; }, 1500);
+      });
+
       form.addEventListener('submit', async function (e) {
         e.preventDefault();
+        copyMsg.textContent = '';
         const payload = {url: urlInput.value};
         if (expirySelect.value === 'custom') {
           if (!customInput.value) {
             result.textContent = 'Error: Please choose a date and time.';
             expiryInfo.textContent = '';
+            copyBtn.style.display = 'none';
             return;
           }
           const when = new Date(customInput.value);
           if (Number.isNaN(when.getTime()) || when.getTime() <= Date.now()) {
             result.textContent = 'Error: The expiration date must be in the future.';
             expiryInfo.textContent = '';
+            copyBtn.style.display = 'none';
             return;
           }
           payload.expires_at = Math.floor(when.getTime() / 1000);
@@ -87,15 +112,19 @@
         });
         const data = await res.json();
         if (res.ok) {
+          shortUrl = data.short_url;
           result.textContent = 'Short URL: ' + data.short_url;
           if (data.expires_at) {
             expiryInfo.textContent = 'Expires: ' + data.expires_at.replace('+00:00', 'Z');
           } else {
             expiryInfo.textContent = 'Expires: never';
           }
+          copyBtn.style.display = 'inline';
         } else {
+          shortUrl = '';
           result.textContent = 'Error: ' + (data.error || JSON.stringify(data));
           expiryInfo.textContent = '';
+          copyBtn.style.display = 'none';
         }
       });
     </script>
