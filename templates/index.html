@@ -1,31 +1,211 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Simple URL Shortener</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --accent: #2563eb;
+        --border: #cbd5e1;
+        --muted: #64748b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 2rem 1rem;
+        background: Canvas;
+        color: CanvasText;
+      }
+      main { width: min(100%, 34rem); }
+      h1 { margin: 0 0 1.5rem; font-size: 1.6rem; }
+      form, .result {
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+      }
+      .field { display: flex; flex-direction: column; gap: 0.35rem; }
+      .field + .field { margin-top: 1rem; }
+      label { font-size: 0.9rem; font-weight: 600; }
+      input, select, button {
+        font: inherit;
+        padding: 0.55rem 0.65rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--border);
+        background: Field;
+        color: FieldText;
+        width: 100%;
+      }
+      input:focus, select:focus, button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+      button {
+        margin-top: 1rem;
+        border-color: transparent;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.6; cursor: progress; }
+      [hidden] { display: none !important; }
+      .result { margin-top: 1.25rem; }
+      .result p { margin: 0 0 0.5rem; font-size: 0.9rem; color: var(--muted); }
+      .result a { font-size: 1.15rem; font-weight: 600; word-break: break-all; }
+      .expiry { margin: 0.6rem 0 0; font-size: 0.9rem; color: var(--muted); }
+      .error { margin: 1rem 0 0; color: #dc2626; white-space: pre-wrap; }
+      .hint { margin: 0.25rem 0 0; font-size: 0.8rem; color: var(--muted); }
+    </style>
   </head>
   <body>
-    <h1>Simple URL Shortener</h1>
-    <form id="shorten-form">
-      <input type="text" id="url" placeholder="Enter URL" size="60" />
-      <button type="submit">Shorten</button>
-    </form>
-    <p id="result"></p>
+    <main>
+      <h1>Simple URL Shortener</h1>
+      <form id="shorten-form">
+        <div class="field">
+          <label for="url">Long URL</label>
+          <input type="text" id="url" placeholder="https://example.com/a/very/long/link" required />
+        </div>
+
+        <div class="field">
+          <label for="expiry">Expires</label>
+          <select id="expiry">
+            <option value="">Never</option>
+            <option value="1800">In 30 minutes</option>
+            <option value="3600">In 1 hour</option>
+            <option value="21600">In 6 hours</option>
+            <option value="86400">In 1 day</option>
+            <option value="604800">In 7 days</option>
+            <option value="custom">Custom date &amp; time…</option>
+          </select>
+          <p class="hint" id="custom-hint" hidden>Pick the exact date and time the link should stop working.</p>
+          <input type="datetime-local" id="expiry-custom" step="1" hidden />
+        </div>
+
+        <button type="submit" id="submit">Shorten</button>
+      </form>
+
+      <section class="result" id="result" hidden>
+        <p>Short URL</p>
+        <a id="short-url" href="#"></a>
+        <p class="expiry" id="expiry-text"></p>
+      </section>
+
+      <p class="error" id="error" hidden></p>
+    </main>
 
     <script>
-      document.getElementById('shorten-form').addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const url = document.getElementById('url').value;
-        const res = await fetch('/shorten', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({url})
-        });
-        const data = await res.json();
-        if (res.ok) {
-          document.getElementById('result').textContent = 'Short URL: ' + data.short_url;
+      const form = document.getElementById('shorten-form');
+      const submit = document.getElementById('submit');
+      const urlInput = document.getElementById('url');
+      const expirySelect = document.getElementById('expiry');
+      const customInput = document.getElementById('expiry-custom');
+      const customHint = document.getElementById('custom-hint');
+      const result = document.getElementById('result');
+      const shortUrl = document.getElementById('short-url');
+      const expiryText = document.getElementById('expiry-text');
+      const errorBox = document.getElementById('error');
+
+      const MAX_MS = 10 * 365 * 24 * 60 * 60 * 1000;
+
+      function pad(value) {
+        return String(value).padStart(2, '0');
+      }
+
+      function toLocalInput(date) {
+        return (
+          date.getFullYear() + '-' +
+          pad(date.getMonth() + 1) + '-' +
+          pad(date.getDate()) + 'T' +
+          pad(date.getHours()) + ':' +
+          pad(date.getMinutes()) + ':' +
+          pad(date.getSeconds())
+        );
+      }
+
+      function showError(message) {
+        errorBox.textContent = message;
+        errorBox.hidden = false;
+        result.hidden = true;
+      }
+
+      function showResult(data) {
+        errorBox.hidden = true;
+        shortUrl.textContent = data.short_url;
+        shortUrl.href = data.short_url;
+        if (data.expires_at) {
+          const when = new Date(data.expires_at);
+          expiryText.textContent = 'Expires ' + when.toLocaleString();
         } else {
-          document.getElementById('result').textContent = 'Error: ' + (data.error || JSON.stringify(data));
+          expiryText.textContent = 'Never expires';
+        }
+        result.hidden = false;
+      }
+
+      expirySelect.addEventListener('change', function () {
+        const custom = expirySelect.value === 'custom';
+        customInput.hidden = !custom;
+        customHint.hidden = !custom;
+        if (custom) {
+          const now = Date.now();
+          customInput.min = toLocalInput(new Date(now + 1000));
+          customInput.max = toLocalInput(new Date(now + MAX_MS));
+          customInput.focus();
+        }
+      });
+
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        errorBox.hidden = true;
+
+        const payload = {url: urlInput.value.trim()};
+        if (!payload.url) {
+          showError('Please enter a URL.');
+          return;
+        }
+
+        if (expirySelect.value === 'custom') {
+          if (!customInput.value) {
+            showError('Please choose a date and time.');
+            return;
+          }
+          const when = new Date(customInput.value);
+          if (Number.isNaN(when.getTime()) || when.getTime() <= Date.now()) {
+            showError('The expiration date must be in the future.');
+            return;
+          }
+          payload.expires_at = Math.floor(when.getTime() / 1000);
+        } else if (expirySelect.value) {
+          payload.expires_in = Number(expirySelect.value);
+        }
+
+        submit.disabled = true;
+        submit.textContent = 'Shortening…';
+        try {
+          const res = await fetch('/shorten', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (res.ok) {
+            showResult(data);
+            form.reset();
+            customInput.hidden = true;
+            customHint.hidden = true;
+          } else {
+            showError('Error: ' + (data.error || JSON.stringify(data)));
+          }
+        } catch (err) {
+          showError('Could not reach the server. Please try again.');
+        } finally {
+          submit.disabled = false;
+          submit.textContent = 'Shorten';
         }
       });
     </script>
