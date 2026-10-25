@@ -22,12 +22,18 @@
       <br /><br />
       <input type="datetime-local" id="expiry-custom" step="1" style="display:none" />
       <br id="custom-br" style="display:none" />
+      <label for="password">Password (optional):</label>
+      <input type="password" id="password" placeholder="Leave blank for no protection" size="40" />
+      <br /><br />
       <button type="submit">Shorten</button>
     </form>
     <p id="result"></p>
     <p id="expiry-info"></p>
+    <p id="protect-info"></p>
     <button id="copy-btn" style="display:none" type="button">Copy</button>
     <span id="copy-msg"></span>
+    <br />
+    <img id="qr-img" src="" alt="QR code" style="display:none; margin-top:10px" />
 
     <script>
       const form = document.getElementById('shorten-form');
@@ -35,10 +41,13 @@
       const expirySelect = document.getElementById('expiry');
       const customInput = document.getElementById('expiry-custom');
       const customBr = document.getElementById('custom-br');
+      const passwordInput = document.getElementById('password');
       const result = document.getElementById('result');
       const expiryInfo = document.getElementById('expiry-info');
+      const protectInfo = document.getElementById('protect-info');
       const copyBtn = document.getElementById('copy-btn');
       const copyMsg = document.getElementById('copy-msg');
+      const qrImg = document.getElementById('qr-img');
       let shortUrl = '';
 
       const MAX_MS = 10 * 365 * 24 * 60 * 60 * 1000;
@@ -90,19 +99,26 @@
           if (!customInput.value) {
             result.textContent = 'Error: Please choose a date and time.';
             expiryInfo.textContent = '';
+            protectInfo.textContent = '';
             copyBtn.style.display = 'none';
+            qrImg.style.display = 'none';
             return;
           }
           const when = new Date(customInput.value);
           if (Number.isNaN(when.getTime()) || when.getTime() <= Date.now()) {
             result.textContent = 'Error: The expiration date must be in the future.';
             expiryInfo.textContent = '';
+            protectInfo.textContent = '';
             copyBtn.style.display = 'none';
+            qrImg.style.display = 'none';
             return;
           }
           payload.expires_at = Math.floor(when.getTime() / 1000);
         } else if (expirySelect.value) {
           payload.expires_in = Number(expirySelect.value);
+        }
+        if (passwordInput.value) {
+          payload.password = passwordInput.value;
         }
 
         const res = await fetch('/shorten', {
@@ -119,14 +135,20 @@
           } else {
             expiryInfo.textContent = 'Expires: never';
           }
+          protectInfo.textContent = data.protected ? 'Password protected' : '';
           copyBtn.style.display = 'inline';
+          qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(data.short_url);
+          qrImg.style.display = 'block';
         } else {
           shortUrl = '';
           result.textContent = 'Error: ' + (data.error || JSON.stringify(data));
           expiryInfo.textContent = '';
+          protectInfo.textContent = '';
           copyBtn.style.display = 'none';
+          qrImg.style.display = 'none';
         }
       });
     </script>
   </body>
 </html>
+EOF

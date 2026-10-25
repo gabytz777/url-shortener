@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Password required</title>
+  </head>
+  <body>
+    <h1>Password required</h1>
+    <p>This short link is password protected.</p>
+    {% if error %}<p style="color:red">{{ error }}</p>{% endif %}
+    <form method="post">
+      <input type="password" name="password" placeholder="Enter password" autofocus />
+      <button type="submit">Unlock</button>
+    </form>
+  </body>
+</html>

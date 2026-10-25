@@ -5,6 +5,8 @@ import os
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
+from werkzeug.security import check_password_hash, generate_password_hash
+
 DB_PATH = os.environ.get("URL_SHORTENER_DB", "urls.db")
 
 # links can live for at most ten years
@@ -16,7 +18,8 @@ CREATE_TABLE_SQL = """CREATE TABLE IF NOT EXISTS urls (
     url TEXT NOT NULL,
     created_at REAL NOT NULL,
     visits INTEGER NOT NULL DEFAULT 0,
-    expires_at REAL
+    expires_at REAL,
+    password_hash TEXT
 );"""
 
 
@@ -29,10 +32,11 @@ def get_conn():
 def init_db():
     conn = get_conn()
     conn.execute(CREATE_TABLE_SQL)
-    # databases created before expiring links existed have no expires_at column
+    # databases created before expiring/password protection existed have no column
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(urls)")}
-    if "expires_at" not in columns:
-        conn.execute("ALTER TABLE urls ADD COLUMN expires_at REAL")
+    for column, coltype in (("expires_at", "REAL"), ("password_hash", "TEXT")):
+        if column not in columns:
+            conn.execute(f"ALTER TABLE urls ADD COLUMN {column} {coltype}")
     conn.commit()
     conn.close()
 
@@ -61,20 +65,21 @@ def generate_code(length: int = 6) -> str:
             return code
 
 
-def add_url(url: str, expires_at=None) -> str:
+def add_url(url: str, expires_at=None, password=None) -> str:
     """Store a URL and return its short code.
 
     ``expires_at`` is a Unix timestamp, or None for a link that never expires.
     """
     url = _normalize_url(url)
+    password_hash = generate_password_hash(password) if password else None
     conn = get_conn()
     cur = conn.cursor()
     for _ in range(5):
         code = generate_code()
         try:
             cur.execute(
-                "INSERT INTO urls (code, url, created_at, expires_at) VALUES (?, ?, ?, ?)",
-                (code, url, time.time(), expires_at),
+                "INSERT INTO urls (code, url, created_at, expires_at, password_hash) VALUES (?, ?, ?, ?, ?)",
+                (code, url, time.time(), expires_at, password_hash),
             )
             conn.commit()
             conn.close()
@@ -103,6 +108,21 @@ def get_url(code: str):
     if row is None or is_expired(row["expires_at"]):
         return None
     return row["url"]
+
+
+def has_password(row) -> bool:
+    if row is None:
+        return False
+    return bool(row["password_hash"])
+
+
+def verify_password(row, password) -> bool:
+    if row is None:
+        return False
+    password_hash = row["password_hash"]
+    if not password_hash:
+        return True
+    return check_password_hash(password_hash, password or "")
 
 
 def increment_visits(code: str):

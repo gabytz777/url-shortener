@@ -18,6 +18,19 @@ def _request_data():
     return request.form
 
 
+def _get_password(data):
+    if not data:
+        return None
+    password = data.get('password')
+    if password is None:
+        return None
+    if isinstance(password, str) and password.strip() == '':
+        return None
+    if isinstance(password, str):
+        return password
+    return str(password)
+
+
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
@@ -39,22 +52,38 @@ def shorten():
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    code = shortener.add_url(url, expires_at=expires_at)
+    password = _get_password(data)
+    try:
+        code = shortener.add_url(url, expires_at=expires_at, password=password)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 400
     short_url = request.host_url.rstrip('/') + '/' + code
     return jsonify({
         "short_url": short_url,
         "code": code,
         "expires_at": shortener.format_expiry(expires_at),
+        "protected": bool(password),
     })
 
 
-@app.route('/<code>')
+@app.route('/<code>', methods=['GET', 'POST'])
 def redirect_to(code):
     record = shortener.get_record(code)
     if record is None:
         return "Not found", 404
     if shortener.is_expired(record["expires_at"]):
         return "This link has expired", 410
+
+    if shortener.has_password(record):
+        if request.method == 'POST':
+            data = _request_data()
+            password = _get_password(data)
+            if shortener.verify_password(record, password):
+                shortener.increment_visits(code)
+                return redirect(record["url"], code=302)
+            return render_template('unlock.html', code=code, error='Wrong password'), 401
+        return render_template('unlock.html', code=code, error=None)
+
     shortener.increment_visits(code)
     return redirect(record["url"], code=302)
 
