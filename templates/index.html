@@ -9,24 +9,31 @@
     <form id="shorten-form">
       <input type="text" id="url" placeholder="Enter URL" size="60" />
       <br /><br />
-      <label for="expiry">Expires:</label>
-      <select id="expiry">
-        <option value="">Never</option>
-        <option value="1800">In 30 minutes</option>
-        <option value="3600">In 1 hour</option>
-        <option value="21600">In 6 hours</option>
-        <option value="86400">In 1 day</option>
-        <option value="604800">In 7 days</option>
-        <option value="custom">Custom date & time</option>
-      </select>
-      <br /><br />
-      <input type="datetime-local" id="expiry-custom" step="1" style="display:none" />
-      <br id="custom-br" style="display:none" />
-      <label for="password">Password (optional):</label>
-      <input type="password" id="password" placeholder="Leave blank for no protection" size="40" />
-      <br /><br />
       <button type="submit">Shorten</button>
     </form>
+
+    <br />
+    <details>
+      <summary>Options</summary>
+      <div style="margin-top:10px">
+        <label for="expiry">Expires:</label>
+        <select id="expiry">
+          <option value="">Never</option>
+          <option value="1800">In 30 minutes</option>
+          <option value="3600">In 1 hour</option>
+          <option value="21600">In 6 hours</option>
+          <option value="86400">In 1 day</option>
+          <option value="604800">In 7 days</option>
+          <option value="custom">Custom date & time</option>
+        </select>
+        <br /><br />
+        <input type="datetime-local" id="expiry-custom" step="1" style="display:none" />
+        <br id="custom-br" style="display:none" />
+        <label for="password">Password:</label>
+        <input type="password" id="password" placeholder="optional" size="30" />
+      </div>
+    </details>
+
     <p id="result"></p>
     <p id="expiry-info"></p>
     <p id="protect-info"></p>
@@ -151,4 +158,3 @@
     </script>
   </body>
 </html>
-EOF
